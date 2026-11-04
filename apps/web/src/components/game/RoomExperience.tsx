@@ -2,7 +2,7 @@
 
 import { Canvas } from "@react-three/fiber";
 import { LOOK_COLORS } from "@karaoke/shared";
-import { useEffect, useRef, useState } from "react";
+import { Component, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { requestId } from "@/lib/time";
 import { applyAvatar, lookMessage } from "@/game/avatar-look";
@@ -21,6 +21,27 @@ import { LightingPanel } from "./LightingPanel";
 import { DrinkBar, DrunkVeil, ServiceMenu } from "./ServiceMenu";
 import { RoomScene } from "./RoomScene";
 import { TVScreenOverlay } from "./TVScreenOverlay";
+
+class RoomViewBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (this.state.failed) return <RoomViewFallback />;
+    return this.props.children;
+  }
+}
+
+function RoomViewFallback() {
+  return (
+    <div className="grid h-full place-items-center bg-ink px-6 text-center text-sm leading-6 text-white">
+      Máy này không mở được hình 3D. Hãy tải lại trang, hoặc mở bằng Chrome mới hơn.
+    </div>
+  );
+}
 
 export function RoomExperience({ roomId }: { roomId: string }) {
   const router = useRouter();
@@ -48,6 +69,7 @@ export function RoomExperience({ roomId }: { roomId: string }) {
   const [tier, setTier] = useState<"phone" | "tablet" | "desktop">("desktop");
   const [portrait, setPortrait] = useState(false);
   const [lowGpu, setLowGpu] = useState(false);
+  const [viewFailed, setViewFailed] = useState(false);
   const [sheet, setSheet] = useState<MobileSheet>(null);
   const [leaveAsk, setLeaveAsk] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -182,13 +204,30 @@ export function RoomExperience({ roomId }: { roomId: string }) {
 
   return (
     <main className={`relative h-[100dvh] overflow-hidden bg-ink text-white ${portrait ? "is-portrait" : ""}`}>
-      <Canvas
-        camera={{ position: [0, 1.78, 2.05], fov: tier === "phone" ? 60 : tier === "tablet" ? 54 : 48 }}
-        dpr={lowGpu ? [1, 1] : tier === "desktop" ? [1, 1.5] : [1, 1.35]}
-        gl={{ antialias: !lowGpu, powerPreference: "high-performance" }}
-      >
-        <RoomScene />
-      </Canvas>
+      <RoomViewBoundary>
+        {viewFailed ? <RoomViewFallback /> : (
+          <Canvas
+            style={{ background: "#090814", width: "100%", height: "100%" }}
+            camera={{ position: [0, 1.78, 2.05], fov: tier === "phone" ? 60 : tier === "tablet" ? 54 : 48 }}
+            dpr={lowGpu || tier === "phone" ? [1, 1] : tier === "tablet" ? [1, 1.15] : [1, 1.5]}
+            gl={{
+              alpha: false,
+              antialias: tier === "desktop" && !lowGpu,
+              powerPreference: tier === "desktop" && !lowGpu ? "high-performance" : "default",
+              failIfMajorPerformanceCaveat: false,
+            }}
+            onCreated={({ gl }) => {
+              gl.setClearColor("#090814");
+              gl.domElement.addEventListener("webglcontextlost", (event) => {
+                event.preventDefault();
+                setViewFailed(true);
+              });
+            }}
+          >
+            <RoomScene />
+          </Canvas>
+        )}
+      </RoomViewBoundary>
       <TVScreenOverlay />
       <DrunkVeil />
       <DrinkBar />
