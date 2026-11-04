@@ -27,7 +27,7 @@ export function TVControlPanel({ onSearch, onQueue, layout = "full" }: { onSearc
   const [shown, setShown] = useState(0);
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(layout !== "dock");
   const access = {
     can: (action: TvAction) => canPerform({ userId: userId ?? "", role: myRole, displayName: "" }, action, permissions, hostId),
   };
@@ -51,7 +51,6 @@ export function TVControlPanel({ onSearch, onQueue, layout = "full" }: { onSearc
 
   const playing = playbackState === "playing";
   const art = thumbnail || (videoId ? `https://i.ytimg.com/vi/${videoId}/default.jpg` : "");
-  const expanded = layout === "full" || open;
 
   return (
     <div className="glass pointer-events-auto rounded-3xl p-3">
@@ -61,9 +60,12 @@ export function TVControlPanel({ onSearch, onQueue, layout = "full" }: { onSearc
         ) : (
           <div className="h-11 w-16 shrink-0 rounded-lg bg-white/10" />
         )}
-        <button type="button" className="min-w-0 flex-1 text-left" onClick={() => layout === "dock" && setOpen((value) => !value)}>
+        <button type="button" className="min-w-0 flex-1 text-left" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
           <p className="truncate text-sm font-semibold leading-5">{videoId ? title || "Video YouTube" : "Chưa có bài hát"}</p>
           <p className="truncate text-xs leading-5 text-white/55">{playing ? "Đang phát" : playbackState === "paused" ? "Tạm dừng" : "Chưa phát"}</p>
+        </button>
+        <button type="button" className="icon-btn shrink-0" aria-label={open ? "Thu gọn" : "Mở rộng"} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+          <ChevronIcon open={open} />
         </button>
         {playing ? (
           <button disabled={!access.can("control")} className="icon-btn shrink-0" aria-label="Tạm dừng" onClick={() => command("tv:pause")}>
@@ -83,7 +85,7 @@ export function TVControlPanel({ onSearch, onQueue, layout = "full" }: { onSearc
           Chọn bài
         </button>
       </div>
-      {expanded ? (
+      {open ? (
         <>
           <div className="mt-3">
             <div className="mb-1 flex justify-between text-xs leading-5 text-white/60">
@@ -157,6 +159,14 @@ function PauseIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
       <path d="M3 2h3.2v12H3zM9.8 2H13v12H9.8z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className={open ? "" : "rotate-180"}>
+      <path d="M3.2 6.2 8 11l4.8-4.8-1.2-1.2L8 8.6 4.4 5z" fill="currentColor" />
     </svg>
   );
 }
