@@ -9,11 +9,8 @@ import { useSession } from "@/stores/session.store";
 import { useTv } from "@/stores/tv.store";
 
 const ACTIONS: { id: CombatAction; label: string }[] = [
-  { id: "punch", label: "Đấm" },
-  { id: "push", label: "Đẩy" },
+  { id: "swing", label: "Đập" },
   { id: "dodge", label: "Né" },
-  { id: "block", label: "Đỡ" },
-  { id: "taunt", label: "Trêu" },
 ];
 
 export function EyelidVeil() {

@@ -66,6 +66,7 @@ export const STAGE = { minX: -2.6, maxX: 2.6, minZ: -5.5, maxZ: -4.05 };
 export const MIC_POINT = { x: 0, z: -4.7 };
 export const TV_POINT = { x: 0, z: -5.85 };
 export const SERVICE_COUNTER = { x: 6.55, z: 6.15 };
+export const WEAPON_RACK = { x: -8.4, z: 6.5, reach: 1.55, stock: 4 };
 export const DANCER_REST = { x: 5.6, z: -2.6 };
 
 export const WALK_SPEED = 2.7;
@@ -78,7 +79,7 @@ export const PLAYER_GAP = 0.52;
 export const EMOTES = ["wave", "clap", "laugh", "heart", "dance", "cheer"] as const;
 export type EmoteId = (typeof EMOTES)[number];
 
-export const MOTIONS = ["idle", "walk", "run", "jump", "sit", "stand", "sing", "dance", "wave", "clap", "punch", "push", "dodge", "block", "stagger", "lie", "taunt"] as const;
+export const MOTIONS = ["idle", "walk", "run", "jump", "sit", "stand", "sing", "dance", "wave", "clap", "swing", "dodge", "stagger", "lie"] as const;
 export type MotionId = (typeof MOTIONS)[number];
 
 export const OUTFITS = ["hoodie", "vest"] as const;
@@ -221,7 +222,7 @@ export function cameraPull(px: number, pz: number, cx: number, cz: number): { x:
 
 export interface InteractTarget {
   id: string;
-  kind: "seat" | "tv" | "stage" | "mic" | "console" | "player" | "service" | "beer";
+  kind: "seat" | "tv" | "stage" | "mic" | "console" | "player" | "service" | "beer" | "weapon";
   label: string;
 }
 
@@ -237,6 +238,7 @@ export function nearestProp(x: number, z: number, seated: boolean, seatId: strin
     { target: { id: "tv", kind: "tv", label: "Chọn bài" }, x: TV_POINT.x, z: TV_POINT.z, radius: 1.7 },
     { target: { id: "console", kind: "console", label: "Mở bàn karaoke" }, x: -6.3, z: 6.4, radius: 1.2 },
     { target: { id: "counter", kind: "service", label: "Gọi phục vụ" }, x: SERVICE_COUNTER.x, z: SERVICE_COUNTER.z, radius: 1.45 },
+    { target: { id: "rack", kind: "weapon", label: "Lấy gậy" }, x: WEAPON_RACK.x, z: WEAPON_RACK.z, radius: WEAPON_RACK.reach },
   ];
   let best: InteractTarget | null = null;
   let bestDist = Infinity;

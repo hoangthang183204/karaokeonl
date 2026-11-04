@@ -48,6 +48,7 @@ export class PlayerState extends Schema {
   @type("number") downUntil: number = 0;
   @type("number") recoverUntil: number = 0;
   @type("number") cooldownUntil: number = 0;
+  @type("string") weapon: string = "";
 }
 
 export class NpcState extends Schema {
@@ -137,6 +138,7 @@ export class KaraokeState extends Schema {
   @type("string") lightSpotTarget: string = "stage";
   @type("boolean") lightAutoDance: boolean = true;
   @type("boolean") pvpEnabled: boolean = true;
+  @type("number") weaponStock: number = 4;
   @type("number") lightStartedAt: number = 0;
   @type("number") lightRevision: number = 0;
   @type(["string"]) skipVoterIds = new ArraySchema<string>();

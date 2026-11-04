@@ -11,7 +11,7 @@ export function sendCombat(action: CombatAction) {
   if (!roomFlags.pvp) return;
   if (localMotion.hpState === "knocked_out" || localMotion.hpState === "recovering") return;
   let targetId = "";
-  if (action === "punch" || action === "push" || action === "taunt") {
+  if (action === "swing") {
     let best = 8;
     for (const body of remoteBodies.values()) {
       const dist = Math.hypot(body.x - localMotion.x, body.z - localMotion.z);

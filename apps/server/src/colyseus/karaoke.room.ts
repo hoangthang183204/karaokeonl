@@ -35,6 +35,9 @@ import {
   resolveCombat,
   isCombatAction,
   combatLocked,
+  takeStick,
+  storeStick,
+  WEAPON_RACK,
   sanitizeLighting,
   stepDanceLight,
   tickServices,
@@ -294,6 +297,8 @@ export class KaraokeRoom extends Room<KaraokeState> {
     this.onMessage("beer:discard", (client) => this.beer(client, "discard"));
     this.onMessage("player:emote", (client, payload) => this.emote(client, payload));
     this.onMessage("combat:act", (client, payload) => this.combat(client, payload));
+    this.onMessage("weapon:take", (client) => this.weapon(client, "take"));
+    this.onMessage("weapon:store", (client) => this.weapon(client, "store"));
     this.onMessage("room:pvp", (client, payload) => this.setPvp(client, payload));
     this.onMessage("chat:send", (client, payload) => this.chat(client, payload));
   }
@@ -636,6 +641,10 @@ export class KaraokeRoom extends Room<KaraokeState> {
       client.send("tv:error", { code: "invalid_request", message: "Không dùng được lúc đang nằm." });
       return;
     }
+    if (action === "take" && player.weapon) {
+      client.send("tv:error", { code: "invalid_request", message: "Đang cầm gậy." });
+      return;
+    }
     if (this.hitLimit(`${player.id}:beer`, 8, 4000)) return;
     const now = Date.now();
     const actor = { id: player.id, x: player.x, z: player.z, role: player.role };
@@ -789,7 +798,25 @@ export class KaraokeRoom extends Room<KaraokeState> {
     const targetId = asString(body.targetId);
     const target = targetId ? this.state.players.get(targetId) ?? null : null;
     const result = resolveCombat(player, target, action, Date.now(), this.state.pvpEnabled);
-    if (!result.ok) client.send("tv:error", { code: "invalid_request", message: result.message });
+    if (!result.ok) {
+      client.send("tv:error", { code: "invalid_request", message: result.message });
+      return;
+    }
+    if (result.returned) this.state.weaponStock += result.returned;
+  }
+
+  private weapon(client: Client, action: "take" | "store") {
+    const player = this.player(client);
+    if (!player) return;
+    if (this.hitLimit(`${player.id}:weapon`, 6, 3000)) return;
+    const result = action === "take"
+      ? takeStick(player, this.state.weaponStock, Boolean(player.hand))
+      : storeStick(player, this.state.weaponStock);
+    if (!result.ok) {
+      client.send("tv:error", { code: "invalid_request", message: result.message });
+      return;
+    }
+    this.state.weaponStock = result.stock;
   }
 
   private setPvp(client: Client, payload: unknown) {
@@ -844,6 +871,8 @@ export class KaraokeRoom extends Room<KaraokeState> {
 
   private async removePlayer(userId: string) {
     const wasHost = this.engine.hostId === userId;
+    const leaving = this.state.players.get(userId);
+    if (leaving?.weapon) this.state.weaponStock = Math.min(WEAPON_RACK.stock, this.state.weaponStock + 1);
     this.state.players.delete(userId);
     if (!wasHost) {
       await roomBridge.applyRoleChanges?.({ roomId: this.roomKey, removeUserId: userId });

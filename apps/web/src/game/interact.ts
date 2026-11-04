@@ -1,5 +1,5 @@
-import { DRINK, SEATS, nearestProp, type InteractTarget } from "@karaoke/shared";
-import { interactHud, localMotion, propBodies, remoteBodies } from "./runtime";
+import { DRINK, SEATS, WEAPON_RACK, nearestProp, type InteractTarget } from "@karaoke/shared";
+import { interactHud, localMotion, propBodies, remoteBodies, roomFlags } from "./runtime";
 import { useTv } from "@/stores/tv.store";
 
 export function seatOccupied(seatId: string): boolean {
@@ -34,6 +34,10 @@ function beerInteract(): InteractTarget | null {
 export function currentInteract(): InteractTarget | null {
   const beer = beerInteract();
   if (beer) return beer;
+  if (!localMotion.seated && Math.hypot(localMotion.x - WEAPON_RACK.x, localMotion.z - WEAPON_RACK.z) <= WEAPON_RACK.reach) {
+    const label = localMotion.weapon ? "Cất gậy" : roomFlags.weaponStock > 0 ? "Lấy gậy" : "Tủ gậy đã hết";
+    return { id: "rack", kind: "weapon", label };
+  }
   if (localMotion.seated) return nearestProp(localMotion.x, localMotion.z, true, localMotion.seatId);
   const prop = nearestProp(localMotion.x, localMotion.z, false, "");
   if (prop?.kind === "seat" && seatOccupied(prop.id)) {
@@ -112,6 +116,13 @@ export function performInteract() {
   }
   if (target.kind === "service") {
     window.dispatchEvent(new CustomEvent("karaoke-open-service"));
+    return;
+  }
+  if (target.kind === "weapon") {
+    if (target.label === "Tủ gậy đã hết") return;
+    localMotion.action = "pickup";
+    localMotion.actionUntil = Date.now() + 700;
+    useTv.getState().send(localMotion.weapon ? "weapon:store" : "weapon:take", {});
     return;
   }
   if (target.kind === "beer") {

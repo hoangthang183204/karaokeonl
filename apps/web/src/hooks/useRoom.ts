@@ -38,6 +38,7 @@ interface SchemaPlayer {
   hpState: string;
   combat: string;
   combatUntil: number;
+  weapon: string;
 }
 
 interface SchemaChat {
@@ -66,6 +67,7 @@ interface KaraokeSchema {
   roomName: string;
   hostId: string;
   pvpEnabled: boolean;
+  weaponStock: number;
   currentVideoId: string;
   currentSongTitle: string;
   currentThumbnail: string;
@@ -173,6 +175,7 @@ export function useRoom(roomId: string) {
 
     const apply = (state: KaraokeSchema) => {
       roomFlags.pvp = state.pvpEnabled !== false;
+      roomFlags.weaponStock = Number.isFinite(state.weaponStock) ? state.weaponStock : 4;
       const players: RosterPlayer[] = [];
       const ids: string[] = [];
       state.players.forEach((player, id) => {
@@ -218,6 +221,7 @@ export function useRoom(roomId: string) {
           localMotion.hp = Number.isFinite(player.hp) ? player.hp : 100;
           localMotion.hpState = player.hpState || "normal";
           localMotion.combatUntil = player.combatUntil || 0;
+          localMotion.weapon = player.weapon || "";
           const locked = player.hpState === "knocked_out" || player.hpState === "recovering" || (player.combatUntil || 0) > Date.now();
           if (locked) {
             localMotion.x = player.x;
@@ -254,6 +258,7 @@ export function useRoom(roomId: string) {
           drunk: player.drunkLevel || 0,
           hp: Number.isFinite(player.hp) ? player.hp : 100,
           hpState: player.hpState || "normal",
+          weapon: player.weapon || "",
         });
       });
       for (const id of remoteBodies.keys()) {

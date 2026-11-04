@@ -21,7 +21,7 @@ import { sendCombat } from "@/game/combat-client";
 import { fxSettings } from "@/game/fx-settings";
 import { performInteract, refreshInteract, seatOccupied } from "@/game/interact";
 import { screenMatrix } from "@/game/screen-fit";
-import { actions, cameraRig, joystick, localMotion, npcBodies, propBodies, remoteBodies, remoteRoster, screenFrame, serviceRoster, stageRefs, uiPointers } from "@/game/runtime";
+import { actions, cameraRig, joystick, localMotion, npcBodies, propBodies, remoteBodies, remoteRoster, roomFlags, screenFrame, serviceRoster, stageRefs, uiPointers } from "@/game/runtime";
 import { requestId } from "@/lib/time";
 import { useSession } from "@/stores/session.store";
 import { useTv } from "@/stores/tv.store";
@@ -98,10 +98,7 @@ function Scenery() {
           <meshStandardMaterial color="#111" />
         </mesh>
       </group>
-      <mesh position={[-8.4, 0.45, 6.5]}>
-        <boxGeometry args={[0.7, 0.9, 0.9]} />
-        <meshStandardMaterial color="#221833" />
-      </mesh>
+      <WeaponRack />
       <group position={[6.55, 0, 6.15]}>
         <mesh position={[0, 0.48, 0]}>
           <boxGeometry args={[1.3, 0.96, 0.46]} />
@@ -120,6 +117,32 @@ function Scenery() {
         <boxGeometry args={[1.3, 2.2, 0.08]} />
         <meshStandardMaterial color="#2a2140" />
       </mesh>
+    </group>
+  );
+}
+
+function WeaponRack() {
+  const [stock, setStock] = useState(4);
+  useEffect(() => {
+    const timer = window.setInterval(() => setStock(roomFlags.weaponStock), 300);
+    return () => window.clearInterval(timer);
+  }, []);
+  return (
+    <group position={[-8.4, 0, 6.5]}>
+      <mesh position={[0, 0.72, 0]}>
+        <boxGeometry args={[0.92, 1.44, 0.4]} />
+        <meshStandardMaterial color="#4a3420" roughness={0.8} />
+      </mesh>
+      <mesh position={[0, 0.78, 0.16]}>
+        <boxGeometry args={[0.7, 1.05, 0.04]} />
+        <meshStandardMaterial color="#d6b07a" transparent opacity={0.28} roughness={0.15} />
+      </mesh>
+      {Array.from({ length: Math.max(0, Math.min(4, stock)) }, (_, index) => (
+        <mesh key={index} position={[-0.24 + index * 0.16, 0.85, 0]} rotation={[0.08, 0, 0]}>
+          <cylinderGeometry args={[0.02, 0.025, 0.85, 6]} />
+          <meshStandardMaterial color="#e6c48a" roughness={0.65} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -243,11 +266,8 @@ function LocalAvatar() {
       if (event.repeat) return;
       const key = event.key.toLowerCase();
       if (key === "e") performInteract();
-      if (key === "f") sendCombat("punch");
-      if (key === "g") sendCombat("push");
+      if (key === "f") sendCombat("swing");
       if (key === "v") sendCombat("dodge");
-      if (key === "c") sendCombat("block");
-      if (key === "t") sendCombat("taunt");
     };
     const up = (event: KeyboardEvent) => keys.delete(event.key.toLowerCase());
     window.addEventListener("keydown", down);
@@ -370,6 +390,7 @@ function LocalAvatar() {
           hand: localMotion.hand,
           drunk: localMotion.drunk,
           hp: localMotion.hp,
+          weapon: localMotion.weapon,
           action: localMotion.action,
           actionUntil: localMotion.actionUntil,
           name: user?.displayName ?? "Bạn",
@@ -546,6 +567,7 @@ function RemoteAvatar({ id }: { id: string }) {
             hand: body?.hand ?? "",
             drunk: body?.drunk ?? 0,
             hp: body?.hp ?? 100,
+            weapon: body?.weapon ?? "",
             name: body?.name ?? "Khách",
           };
         }}

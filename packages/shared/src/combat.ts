@@ -1,4 +1,4 @@
-import { clampRoomPosition } from "./world";
+import { WEAPON_RACK, clampRoomPosition } from "./world";
 
 export const COMBAT = {
   maxHp: 100,
@@ -8,25 +8,16 @@ export const COMBAT = {
   recoverHp: 50,
   knockoutMs: 8000,
   recoverMs: 1400,
-  reach: 1.45,
-  tauntReach: 4,
-  punchDamage: 12,
-  pushDamage: 4,
-  pushDistance: 0.7,
-  punchMs: 480,
-  pushMs: 420,
+  reach: 1.75,
+  stickDamage: 14,
+  swingMs: 520,
   dodgeMs: 520,
-  blockMs: 760,
-  tauntMs: 900,
   staggerMs: 520,
-  punchCooldown: 720,
-  pushCooldown: 900,
+  swingCooldown: 780,
   dodgeCooldown: 820,
-  blockCooldown: 400,
-  tauntCooldown: 1500,
 } as const;
 
-export const COMBAT_ACTIONS = ["punch", "push", "dodge", "block", "taunt"] as const;
+export const COMBAT_ACTIONS = ["swing", "dodge"] as const;
 export type CombatAction = (typeof COMBAT_ACTIONS)[number];
 export type HpState = "normal" | "injured" | "critical" | "knocked_out" | "recovering";
 
@@ -46,6 +37,7 @@ export interface Fighter {
   downUntil: number;
   recoverUntil: number;
   cooldownUntil: number;
+  weapon: string;
 }
 
 export function hpStateFor(hp: number): Exclude<HpState, "recovering"> {
@@ -63,39 +55,68 @@ export function combatLocked(fighter: Pick<Fighter, "hpState">): boolean {
   return fighter.hpState === "knocked_out" || fighter.hpState === "recovering";
 }
 
+export function takeStick(
+  fighter: Fighter,
+  stock: number,
+  handsBusy: boolean,
+): { ok: true; stock: number } | { ok: false; message: string } {
+  if (combatLocked(fighter) || fighter.seated) return { ok: false, message: "Không lấy được gậy lúc này." };
+  if (Math.hypot(fighter.x - WEAPON_RACK.x, fighter.z - WEAPON_RACK.z) > WEAPON_RACK.reach) {
+    return { ok: false, message: "Hãy lại gần tủ gậy." };
+  }
+  if (fighter.weapon) return { ok: false, message: "Bạn đang cầm gậy." };
+  if (handsBusy) return { ok: false, message: "Tay đang bận." };
+  if (stock <= 0) return { ok: false, message: "Tủ gậy đã hết." };
+  fighter.weapon = "stick";
+  return { ok: true, stock: stock - 1 };
+}
+
+export function storeStick(
+  fighter: Fighter,
+  stock: number,
+): { ok: true; stock: number } | { ok: false; message: string } {
+  if (!fighter.weapon) return { ok: false, message: "Bạn không cầm gậy." };
+  if (Math.hypot(fighter.x - WEAPON_RACK.x, fighter.z - WEAPON_RACK.z) > WEAPON_RACK.reach) {
+    return { ok: false, message: "Hãy lại gần tủ gậy để cất." };
+  }
+  fighter.weapon = "";
+  return { ok: true, stock: Math.min(WEAPON_RACK.stock, stock + 1) };
+}
+
 export function resolveCombat(
   attacker: Fighter,
   target: Fighter | null,
   action: CombatAction,
   now: number,
   pvpEnabled: boolean,
-): { ok: true } | { ok: false; message: string } {
+): { ok: true; returned: number } | { ok: false; message: string } {
   if (!pvpEnabled) return { ok: false, message: "Phòng đang tắt đối kháng." };
   if (combatLocked(attacker) || attacker.seated) return { ok: false, message: "Không thể ra đòn lúc này." };
   if (now < attacker.cooldownUntil) return { ok: false, message: "Đòn này chưa hồi." };
-  if (action === "dodge" || action === "block") {
-    beginSelf(attacker, action, now);
-    return { ok: true };
+  if (action === "dodge") {
+    beginSelf(attacker, "dodge", now);
+    return { ok: true, returned: 0 };
   }
+  if (attacker.weapon !== "stick") return { ok: false, message: "Hãy lấy gậy trong tủ trước." };
   if (!target || target.id === attacker.id) return { ok: false, message: "Hãy lại gần một người chơi khác." };
   if (combatLocked(target)) return { ok: false, message: "Người này đang nằm." };
-  const reach = action === "taunt" ? COMBAT.tauntReach : COMBAT.reach;
-  if (Math.hypot(attacker.x - target.x, attacker.z - target.z) > reach) {
+  if (Math.hypot(attacker.x - target.x, attacker.z - target.z) > COMBAT.reach) {
     return { ok: false, message: "Hãy lại gần hơn." };
   }
-  beginSelf(attacker, action, now);
-  face(attacker, target);
-  if (action === "taunt") return { ok: true };
-  if (target.combat === "dodge" && now < target.combatUntil) return { ok: true };
-  if (target.combat === "block" && now < target.combatUntil) return { ok: true };
+  beginSelf(attacker, "swing", now);
+  attacker.rot = Math.atan2(target.x - attacker.x, target.z - attacker.z);
+  if (target.combat === "dodge" && now < target.combatUntil) return { ok: true, returned: 0 };
   if (target.seated) {
     target.seated = false;
     target.seatId = "";
   }
-  if (action === "push") shove(attacker, target);
-  const damage = action === "push" ? COMBAT.pushDamage : COMBAT.punchDamage;
-  applyHit(target, damage, now);
-  return { ok: true };
+  const dx = target.x - attacker.x;
+  const dz = target.z - attacker.z;
+  const length = Math.hypot(dx, dz) || 1;
+  const next = clampRoomPosition(target.x + (dx / length) * 0.35, target.z + (dz / length) * 0.35);
+  target.x = next.x;
+  target.z = next.z;
+  return { ok: true, returned: applyHit(target, now) };
 }
 
 export function tickCombat(fighter: Fighter, now: number) {
@@ -120,67 +141,40 @@ export function tickCombat(fighter: Fighter, now: number) {
   if (fighter.hpState === "knocked_out") return;
   if (fighter.combat && fighter.combat !== "recover" && fighter.combatUntil > 0 && now >= fighter.combatUntil) {
     fighter.combat = "";
-    if (isActionMotion(fighter.motion)) fighter.motion = fighter.seated ? "sit" : "idle";
+    if (fighter.motion === "swing" || fighter.motion === "dodge" || fighter.motion === "stagger") {
+      fighter.motion = fighter.seated ? "sit" : "idle";
+    }
   }
 }
 
 function beginSelf(fighter: Fighter, action: CombatAction, now: number) {
-  const duration =
-    action === "punch" ? COMBAT.punchMs
-    : action === "push" ? COMBAT.pushMs
-    : action === "dodge" ? COMBAT.dodgeMs
-    : action === "block" ? COMBAT.blockMs
-    : COMBAT.tauntMs;
-  const cooldown =
-    action === "punch" ? COMBAT.punchCooldown
-    : action === "push" ? COMBAT.pushCooldown
-    : action === "dodge" ? COMBAT.dodgeCooldown
-    : action === "block" ? COMBAT.blockCooldown
-    : COMBAT.tauntCooldown;
   fighter.combat = action;
   fighter.motion = action;
-  fighter.combatUntil = now + duration;
-  fighter.cooldownUntil = now + cooldown;
+  fighter.combatUntil = now + (action === "swing" ? COMBAT.swingMs : COMBAT.dodgeMs);
+  fighter.cooldownUntil = now + (action === "swing" ? COMBAT.swingCooldown : COMBAT.dodgeCooldown);
 }
 
-function applyHit(target: Fighter, damage: number, now: number) {
-  if (combatLocked(target)) return;
-  target.hp = Math.max(0, target.hp - damage);
+function applyHit(target: Fighter, now: number): number {
+  if (combatLocked(target)) return 0;
+  target.hp = Math.max(0, target.hp - COMBAT.stickDamage);
   if (target.hp <= 0) {
+    const returned = target.weapon ? 1 : 0;
     target.hp = 0;
     target.hpState = "knocked_out";
     target.motion = "lie";
     target.combat = "lie";
+    target.weapon = "";
     target.y = 0;
     target.seated = false;
     target.seatId = "";
     target.downUntil = now + COMBAT.knockoutMs;
     target.combatUntil = target.downUntil;
     target.recoverUntil = 0;
-    return;
+    return returned;
   }
   target.hpState = hpStateFor(target.hp);
   target.motion = "stagger";
   target.combat = "stagger";
   target.combatUntil = now + COMBAT.staggerMs;
-}
-
-function shove(attacker: Fighter, target: Fighter) {
-  const dx = target.x - attacker.x;
-  const dz = target.z - attacker.z;
-  const length = Math.hypot(dx, dz) || 1;
-  const next = clampRoomPosition(
-    target.x + (dx / length) * COMBAT.pushDistance,
-    target.z + (dz / length) * COMBAT.pushDistance,
-  );
-  target.x = next.x;
-  target.z = next.z;
-}
-
-function face(attacker: Fighter, target: Fighter) {
-  attacker.rot = Math.atan2(target.x - attacker.x, target.z - attacker.z);
-}
-
-function isActionMotion(motion: string) {
-  return motion === "punch" || motion === "push" || motion === "dodge" || motion === "block" || motion === "stagger" || motion === "taunt";
+  return 0;
 }

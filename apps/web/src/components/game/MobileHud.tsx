@@ -174,7 +174,7 @@ export function MobileHud({
           </div>
           <PvpToggle />
           <FxToggles />
-          <p className="mt-3 text-xs leading-5 text-white/50">Vuốt joystick để đi. Vuốt nền bên phải để xoay camera. Nút Đấm, Đẩy, Né, Đỡ, Trêu nhắm người gần nhất.</p>
+          <p className="mt-3 text-xs leading-5 text-white/50">Vuốt joystick để đi. Vuốt nền bên phải để xoay camera. Lại tủ góc trái để lấy gậy, rồi bấm Đập hoặc Né.</p>
         </Sheet>
       ) : null}
       {sheet === "service" ? (

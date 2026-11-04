@@ -51,9 +51,10 @@ export const localMotion = {
   hp: 100,
   hpState: "normal",
   combatUntil: 0,
+  weapon: "",
 };
 
-export const roomFlags = { pvp: true };
+export const roomFlags = { pvp: true, weaponStock: 4 };
 
 export interface RemoteBody {
   id: string;
@@ -78,6 +79,7 @@ export interface RemoteBody {
   drunk: number;
   hp: number;
   hpState: string;
+  weapon: string;
 }
 
 export const remoteBodies = new Map<string, RemoteBody>();

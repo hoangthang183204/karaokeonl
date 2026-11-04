@@ -24,6 +24,7 @@ export interface AvatarSample {
   action?: string;
   actionUntil?: number;
   hp?: number;
+  weapon?: string;
 }
 
 export function Avatar({ sample, preview = false }: { sample: () => AvatarSample; preview?: boolean }) {
@@ -50,6 +51,7 @@ export function Avatar({ sample, preview = false }: { sample: () => AvatarSample
   const hipCloth = useRef<MeshStandardMaterial>(null);
   const vest = useRef<Group>(null);
   const can = useRef<Group>(null);
+  const stick = useRef<Group>(null);
   const name = useRef<HTMLDivElement>(null);
   const hpFill = useRef<HTMLDivElement>(null);
   const hpWrap = useRef<HTMLDivElement>(null);
@@ -120,30 +122,21 @@ export function Avatar({ sample, preview = false }: { sample: () => AvatarSample
       armL.current.rotation.z = motion === "dance" ? Math.sin(t * danceRate) * 0.6 : 0.15;
       armR.current.rotation.z = motion === "dance" ? -Math.sin(t * danceRate + (pose.danceStyle === "loop2" ? 1.2 : 0)) * 0.6 : holding ? -0.35 : -0.15;
       if (can.current) can.current.visible = Boolean(holding);
+      if (stick.current) stick.current.visible = pose.weapon === "stick" && !holding;
     }
     if (body.current && armL.current && armR.current && legL.current && legR.current) {
       const unsteady = tipsy && walk && drunk >= 5 ? Math.sin(t * 3.1) * 0.14 : 0;
       if (unsteady) body.current.rotation.z += unsteady;
-      if (motion === "punch") {
-        armR.current.rotation.x = -1.7;
-        body.current.rotation.x = 0.28;
-      } else if (motion === "push") {
-        armL.current.rotation.x = -1.15;
-        armR.current.rotation.x = -1.15;
-        body.current.rotation.x = 0.18;
-      } else if (motion === "block") {
-        armL.current.rotation.x = -1.35;
-        armR.current.rotation.x = -1.35;
-        armL.current.rotation.z = 0.7;
-        armR.current.rotation.z = -0.7;
+      if (pose.weapon === "stick" && motion !== "swing" && motion !== "lie") armR.current.rotation.x = -0.55;
+      if (motion === "swing") {
+        armR.current.rotation.x = -2.2;
+        body.current.rotation.x = 0.35;
+        body.current.rotation.z = -0.2;
       } else if (motion === "dodge") {
         body.current.rotation.z = 0.5;
         body.current.position.y -= 0.16;
       } else if (motion === "stagger") {
         body.current.rotation.x = -0.38;
-      } else if (motion === "taunt") {
-        armR.current.rotation.x = -2.5;
-        armR.current.rotation.z = -0.4;
       } else if (motion === "lie") {
         body.current.rotation.x = 1.35;
         body.current.position.y = 0.32;
@@ -241,6 +234,12 @@ export function Avatar({ sample, preview = false }: { sample: () => AvatarSample
           <capsuleGeometry args={[0.055, 0.18, 4, 8]} />
           <meshStandardMaterial ref={skinRight} color="#f6ecff" />
         </mesh>
+        <group ref={stick} visible={false} position={[0.04, -0.28, 0.12]} rotation={[1.15, 0, 0.2]}>
+          <mesh position={[0, -0.28, 0]}>
+            <cylinderGeometry args={[0.02, 0.028, 0.62, 6]} />
+            <meshStandardMaterial color="#d6b07a" roughness={0.7} />
+          </mesh>
+        </group>
         <group ref={can} visible={false} position={[0.02, -0.34, 0.04]}>
           <mesh>
             <cylinderGeometry args={[0.035, 0.035, 0.12, 8]} />

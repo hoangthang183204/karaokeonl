@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { COMBAT, resolveCombat, tickCombat, type Fighter } from "./combat";
+import { COMBAT, resolveCombat, storeStick, takeStick, tickCombat, type Fighter } from "./combat";
+import { WEAPON_RACK } from "./world";
 
 function fighter(id: string, x = 0, z = 0): Fighter {
   return {
@@ -18,57 +19,59 @@ function fighter(id: string, x = 0, z = 0): Fighter {
     downUntil: 0,
     recoverUntil: 0,
     cooldownUntil: 0,
+    weapon: "",
   };
 }
 
 describe("combat", () => {
-  it("applies one punch and rejects a second punch during cooldown", () => {
-    const a = fighter("a");
-    const b = fighter("b", 1, 0);
-    expect(resolveCombat(a, b, "punch", 1_000, true).ok).toBe(true);
-    expect(b.hp).toBe(88);
-    expect(b.motion).toBe("stagger");
-    expect(resolveCombat(a, b, "punch", 1_200, true)).toEqual({ ok: false, message: "Đòn này chưa hồi." });
-    expect(b.hp).toBe(88);
+  it("requires a stick from the rack before a swing lands", () => {
+    const a = fighter("a", WEAPON_RACK.x, WEAPON_RACK.z + 1);
+    const b = fighter("b", WEAPON_RACK.x + 1, WEAPON_RACK.z + 1);
+    expect(resolveCombat(a, b, "swing", 1_000, true)).toEqual({ ok: false, message: "Hãy lấy gậy trong tủ trước." });
+    const taken = takeStick(a, WEAPON_RACK.stock, false);
+    expect(taken).toEqual({ ok: true, stock: 3 });
+    expect(a.weapon).toBe("stick");
+    expect(resolveCombat(a, b, "swing", 1_000, true).ok).toBe(true);
+    expect(b.hp).toBe(86);
+    expect(resolveCombat(a, b, "swing", 1_200, true)).toEqual({ ok: false, message: "Đòn này chưa hồi." });
+    expect(b.hp).toBe(86);
   });
 
-  it("misses a dodge and stops on a block", () => {
+  it("misses when the target dodges", () => {
     const a = fighter("a");
     const b = fighter("b", 1, 0);
+    a.weapon = "stick";
+    b.weapon = "stick";
     resolveCombat(b, null, "dodge", 1_000, true);
-    resolveCombat(a, b, "punch", 1_100, true);
+    resolveCombat(a, b, "swing", 1_100, true);
     expect(b.hp).toBe(100);
-    const c = fighter("c", 1, 0);
-    resolveCombat(c, null, "block", 2_000, true);
-    const d = fighter("d");
-    resolveCombat(d, c, "punch", 2_100, true);
-    expect(c.hp).toBe(100);
+    expect(b.weapon).toBe("stick");
   });
 
-  it("knocks a player down at zero and stands them up with configured HP", () => {
+  it("returns the stick to the rack when a player is knocked out", () => {
     const a = fighter("a");
     const b = fighter("b", 1, 0);
-    b.hp = 12;
-    resolveCombat(a, b, "punch", 5_000, true);
-    expect(b.hpState).toBe("knocked_out");
-    expect(b.motion).toBe("lie");
-    expect(resolveCombat(b, a, "punch", 5_500, true).ok).toBe(false);
-    tickCombat(b, 5_000 + COMBAT.knockoutMs - 1);
+    a.weapon = "stick";
+    b.weapon = "stick";
+    b.hp = 14;
+    const hit = resolveCombat(a, b, "swing", 5_000, true);
+    expect(hit).toEqual({ ok: true, returned: 1 });
+    expect(b.weapon).toBe("");
     expect(b.hpState).toBe("knocked_out");
     tickCombat(b, 5_000 + COMBAT.knockoutMs);
-    expect(b.hpState).toBe("recovering");
     expect(b.hp).toBe(COMBAT.recoverHp);
-    expect(resolveCombat(a, b, "punch", 5_000 + COMBAT.knockoutMs + 100, true).ok).toBe(false);
-    expect(b.hp).toBe(COMBAT.recoverHp);
-    tickCombat(b, 5_000 + COMBAT.knockoutMs + COMBAT.recoverMs);
-    expect(b.hpState).toBe("injured");
-    expect(b.motion).toBe("idle");
+    expect(resolveCombat(a, b, "swing", 5_000 + COMBAT.knockoutMs + 100, true).ok).toBe(false);
   });
 
-  it("rejects a punch that is too far away", () => {
-    const a = fighter("a");
+  it("rejects a swing that is too far and an empty rack", () => {
+    const a = fighter("a", WEAPON_RACK.x, WEAPON_RACK.z + 1);
     const b = fighter("b", 4, 0);
-    expect(resolveCombat(a, b, "punch", 1_000, true).ok).toBe(false);
+    a.weapon = "stick";
+    expect(resolveCombat(a, b, "swing", 1_000, true).ok).toBe(false);
     expect(b.hp).toBe(100);
+    expect(takeStick(fighter("c", WEAPON_RACK.x, WEAPON_RACK.z + 1), 0, false).ok).toBe(false);
+    const held = fighter("d", WEAPON_RACK.x, WEAPON_RACK.z + 1);
+    held.weapon = "stick";
+    expect(storeStick(held, 3)).toEqual({ ok: true, stock: 4 });
   });
 });

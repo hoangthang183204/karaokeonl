@@ -270,7 +270,7 @@ export function RoomExperience({ roomId }: { roomId: string }) {
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
           <div className="glass w-full max-w-sm rounded-3xl p-4">
             <h2 className="text-lg font-bold">Menu</h2>
-            <p className="mt-1 text-xs text-white/60">WASD di chuyển, Shift chạy, Space nhảy, E tương tác. F đấm, G đẩy, V né, C đỡ, T trêu người gần nhất.</p>
+            <p className="mt-1 text-xs text-white/60">WASD di chuyển, Shift chạy, Space nhảy, E tương tác. Lại tủ góc trái lấy gậy. F đập, V né.</p>
             <PvpToggle />
             <FxToggles />
             <div className="mt-3 flex flex-wrap gap-2">
