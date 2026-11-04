@@ -29,7 +29,7 @@ export function LightingPanel({ onClose, embedded = false }: { onClose: () => vo
   const send = useTv((state) => state.send);
   const [tick, setTick] = useState(0);
   const sendTimer = useRef(0);
-  const allowed = canPerform({ userId: userId ?? "", role: myRole, displayName: "" }, "control", permissions, hostId);
+  const allowed = canPerform({ userId: userId ?? "", role: myRole, displayName: "" }, "lights", permissions, hostId);
 
   useEffect(() => {
     const sync = () => setTick((value) => value + 1);

@@ -71,18 +71,23 @@ describe("tv engine", () => {
     expect(state.playbackState).toBe("playing");
   });
 
-  it("lets a member queue a song and blocks pause without permission", () => {
+  it("lets a member queue a song, play it, and pause it", () => {
     let state = room();
-    state = run(state, { type: "play-now", actor: host, requestId: "play-0002", expectedRevision: 0, nowMs: NOW, video: VIDEO_A });
+    state = run(state, { type: "play-now", actor: member, requestId: "play-0002", expectedRevision: 0, nowMs: NOW, video: VIDEO_A });
+    expect(state.playbackState).toBe("playing");
+    expect(state.currentVideoId).toBe(VIDEO_A.videoId);
     state = run(state, { type: "add-song", actor: member, requestId: "add-00001", nowMs: NOW + 1000, video: VIDEO_B });
     expect(state.queue).toHaveLength(1);
     expect(state.queue[0].requestedBy).toBe(member.userId);
     expect(state.queue[0].status).toBe("waiting");
 
     const paused = applyCommand(state, { type: "pause", actor: member, requestId: "pause002", expectedRevision: state.revision, nowMs: NOW + 2000 });
-    expect(paused.ok).toBe(false);
-    expect(paused.error?.code).toBe("forbidden");
-    expect(paused.state.playbackState).toBe("playing");
+    expect(paused.ok).toBe(true);
+    expect(paused.state.playbackState).toBe("paused");
+
+    const changed = applyCommand(paused.state, { type: "next", actor: member, requestId: "next0009", expectedRevision: paused.state.revision, nowMs: NOW + 3000 });
+    expect(changed.ok).toBe(true);
+    expect(changed.state.currentVideoId).toBe(VIDEO_B.videoId);
   });
 
   it("advances the queue, restores previous, and clears waiting songs", () => {

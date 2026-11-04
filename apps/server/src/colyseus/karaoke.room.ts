@@ -493,7 +493,7 @@ export class KaraokeRoom extends Room<KaraokeState> {
 
   private lights(client: Client, payload: unknown) {
     const actor = this.actor(client);
-    if (!actor || !canPerform(actor, "control", this.engine.permissions, this.engine.hostId)) {
+    if (!actor || !canPerform(actor, "lights", this.engine.permissions, this.engine.hostId)) {
       client.send("tv:error", { code: "forbidden", message: errorMessage("forbidden") });
       return;
     }

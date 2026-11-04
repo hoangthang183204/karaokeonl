@@ -465,10 +465,10 @@ function PermissionToggles({
   return (
     <div className="mt-3 space-y-1 text-xs text-white/75">
       <p className="font-semibold text-white">Quyền TV</p>
-      <label className="flex justify-between gap-2"><span>Member thêm bài</span><input type="checkbox" checked={permissions.memberCanAddSong} onChange={(event) => toggle("memberCanAddSong", event.target.checked)} /></label>
+      <p>Mọi người trong phòng đều tìm, chọn, mở, đổi và dừng bài.</p>
       <label className="flex justify-between gap-2"><span>Member vote skip</span><input type="checkbox" checked={permissions.memberCanVoteSkip} onChange={(event) => toggle("memberCanVoteSkip", event.target.checked)} /></label>
-      <label className="flex justify-between gap-2"><span>Member điều khiển</span><input type="checkbox" checked={permissions.memberCanControlPlayback} onChange={(event) => toggle("memberCanControlPlayback", event.target.checked)} /></label>
-      <label className="flex justify-between gap-2"><span>Co-host điều khiển</span><input type="checkbox" checked={permissions.coHostCanControlPlayback} onChange={(event) => toggle("coHostCanControlPlayback", event.target.checked)} /></label>
+      <label className="flex justify-between gap-2"><span>Member đổi đèn</span><input type="checkbox" checked={permissions.memberCanControlPlayback} onChange={(event) => toggle("memberCanControlPlayback", event.target.checked)} /></label>
+      <label className="flex justify-between gap-2"><span>Đồng chủ đổi đèn</span><input type="checkbox" checked={permissions.coHostCanControlPlayback} onChange={(event) => toggle("coHostCanControlPlayback", event.target.checked)} /></label>
       <label className="flex justify-between gap-2"><span>Chỉ host xóa hàng chờ</span><input type="checkbox" checked={permissions.hostOnlyCanClearQueue} onChange={(event) => toggle("hostOnlyCanClearQueue", event.target.checked)} /></label>
       <label className="flex justify-between gap-2"><span>Đủ vote thì tự chuyển</span><input type="checkbox" checked={permissions.autoSkipOnThreshold} onChange={(event) => toggle("autoSkipOnThreshold", event.target.checked)} /></label>
       <label className="flex items-center justify-between gap-2">Ngưỡng vote

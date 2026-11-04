@@ -12,6 +12,8 @@ function matrix(perms: TVPermissions = DEFAULT_PERMISSIONS) {
     memberAdd: canPerform(member, "addSong", perms, host.userId),
     memberControl: canPerform(member, "control", perms, host.userId),
     cohostControl: canPerform(cohost, "control", perms, host.userId),
+    memberLights: canPerform(member, "lights", perms, host.userId),
+    cohostLights: canPerform(cohost, "lights", perms, host.userId),
     memberClear: canPerform(member, "clearQueue", perms, host.userId),
     cohostClear: canPerform(cohost, "clearQueue", perms, host.userId),
     hostClear: canPerform(host, "clearQueue", perms, host.userId),
@@ -27,8 +29,10 @@ describe("permission matrix", () => {
     expect(matrix()).toEqual({
       hostSearch: true,
       memberAdd: true,
-      memberControl: false,
+      memberControl: true,
       cohostControl: true,
+      memberLights: false,
+      cohostLights: true,
       memberClear: false,
       cohostClear: false,
       hostClear: true,
@@ -39,7 +43,7 @@ describe("permission matrix", () => {
     });
   });
 
-  it("lets the host open member playback and co-host queue clearing", () => {
+  it("lets anyone in the room pick and play songs, and keeps lights on the old toggle", () => {
     const perms: TVPermissions = {
       ...DEFAULT_PERMISSIONS,
       memberCanControlPlayback: true,
@@ -49,9 +53,12 @@ describe("permission matrix", () => {
       hostOnlyCanClearQueue: false,
     };
     expect(canPerform(member, "control", perms, host.userId)).toBe(true);
-    expect(canPerform(member, "addSong", perms, host.userId)).toBe(false);
+    expect(canPerform(member, "addSong", perms, host.userId)).toBe(true);
+    expect(canPerform(member, "search", perms, host.userId)).toBe(true);
     expect(canPerform(member, "voteSkip", perms, host.userId)).toBe(false);
-    expect(canPerform(cohost, "control", perms, host.userId)).toBe(false);
+    expect(canPerform(cohost, "control", perms, host.userId)).toBe(true);
+    expect(canPerform(member, "lights", perms, host.userId)).toBe(true);
+    expect(canPerform(cohost, "lights", perms, host.userId)).toBe(false);
     expect(canPerform(cohost, "clearQueue", perms, host.userId)).toBe(true);
   });
 

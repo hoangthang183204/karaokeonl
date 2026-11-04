@@ -138,8 +138,7 @@ export function TVControlPanel({ onSearch, onQueue, layout = "full" }: { onSearc
               }}
             />
           </div>
-          {skipRequested ? <p className="mt-2 text-xs leading-5 text-amber-100">Phòng đã đủ vote để chuyển bài. Chủ phòng có thể bấm Tiếp.</p> : null}
-          {!access.can("control") ? <p className="mt-2 text-xs leading-5 text-white/45">Bạn xem và thêm bài. Điều khiển phát thuộc chủ phòng hoặc người được cấp quyền.</p> : null}
+          {skipRequested ? <p className="mt-2 text-xs leading-5 text-amber-100">Phòng đã đủ vote để chuyển bài. Ai trong phòng cũng có thể bấm Tiếp.</p> : null}
         </>
       ) : null}
     </div>

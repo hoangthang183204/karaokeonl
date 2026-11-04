@@ -4,6 +4,7 @@ export type TvAction =
   | "search"
   | "addSong"
   | "control"
+  | "lights"
   | "removeSong"
   | "clearQueue"
   | "reorder"
@@ -21,13 +22,12 @@ export function canPerform(actor: Actor, action: TvAction, permissions: TVPermis
 
   switch (action) {
     case "search":
-      return actor.role === "host" || actor.role === "cohost" || actor.role === "member";
     case "addSong":
-      if (host || actor.role === "cohost") return true;
-      return permissions.memberCanAddSong;
     case "control":
     case "removeSong":
     case "reorder":
+      return actor.role === "host" || actor.role === "cohost" || actor.role === "member";
+    case "lights":
       if (host) return true;
       if (actor.role === "cohost") return permissions.coHostCanControlPlayback;
       if (actor.role === "member") return permissions.memberCanControlPlayback;

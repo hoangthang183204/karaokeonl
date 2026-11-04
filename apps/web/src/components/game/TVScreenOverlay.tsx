@@ -41,7 +41,7 @@ export function TVScreenOverlay() {
         <div className="absolute inset-0 flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_center,#2a1848,#07060f_70%)] text-center">
           <div className="standby-glow mb-2 text-2xl font-black tracking-[0.18em] text-fuchsia-200 sm:text-4xl">KARAOKE</div>
           <p className="text-sm text-white/80 sm:text-base">Chưa có bài hát</p>
-          <p className="mt-2 max-w-[80%] text-xs text-white/55">Chủ phòng chọn bài hoặc dán link YouTube. Video sẽ hiện trên chiếc TV này.</p>
+          <p className="mt-2 max-w-[80%] text-xs text-white/55">Ai trong phòng cũng chọn được bài hoặc dán link YouTube. Video sẽ hiện trên chiếc TV này.</p>
         </div>
       )}
       {videoId && playbackState === "error" && errorMessage ? (
