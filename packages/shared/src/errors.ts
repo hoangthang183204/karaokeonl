@@ -10,6 +10,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   quota_exceeded: "Đã hết hạn mức YouTube Data API. Tạm thời hãy dán link video.",
   search_unconfigured: "Chưa cấu hình YouTube Data API. Bạn vẫn có thể dán link YouTube.",
   search_empty: "Không tìm thấy video phù hợp.",
+  search_rate_limited: "Đã tìm quá nhiều lần trong một phút. Đợi một chút rồi bấm Tìm lại.",
   queue_full: "Danh sách chờ đã đầy.",
   user_queue_full: "Bạn đã thêm quá nhiều bài đang chờ.",
   duplicate_video: "Bài này đã có trong danh sách hoặc đang phát.",

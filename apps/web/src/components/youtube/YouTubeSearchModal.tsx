@@ -124,16 +124,19 @@ export function YouTubeSearchModal({ roomId, open, onClose }: { roomId: string; 
       return;
     }
     setLinkId("");
+    window.clearTimeout(searchTimer.current);
     if (value.trim().length < 2) {
-      window.clearTimeout(searchTimer.current);
       requestSeq.current += 1;
       setHits([]);
       setMessage("");
       setStatus("idle");
       return;
     }
-    setStatus("loading");
-    scheduleSearch(350);
+    if (status === "error") {
+      setMessage("");
+      setStatus("idle");
+    }
+    scheduleSearch(800);
   };
 
   return (

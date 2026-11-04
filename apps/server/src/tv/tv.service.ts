@@ -18,10 +18,13 @@ import { RoomsService } from "../rooms/rooms.service";
 import { YoutubeService } from "../youtube/youtube.service";
 import { TvRepository } from "./tv.repository";
 
+type SearchPayload = { configured: boolean; results: { videoId: string; title: string; channelTitle: string; thumbnail: string; durationSec: number | null }[]; message?: string };
+
 @Injectable()
 export class TvService implements OnModuleInit {
   private readonly requests = new Map<string, string[]>();
   private readonly limiter = new RateLimiter();
+  private readonly searchCache = new Map<string, { at: number; payload: SearchPayload }>();
 
   constructor(
     private readonly repo: TvRepository,
@@ -60,10 +63,15 @@ export class TvService implements OnModuleInit {
 
   async search(roomId: string, userId: string, query: string) {
     await this.rooms.requireMember(roomId, userId);
-    if (!this.limiter.allow(`${userId}:search`, 8, 60_000)) {
-      throw new BadRequestException({ code: "rate_limited", message: errorMessage("rate_limited") });
+    const key = query.trim().toLocaleLowerCase("vi");
+    const cached = key ? this.searchCache.get(key) : undefined;
+    if (cached && Date.now() - cached.at < 60_000) return cached.payload;
+    if (!this.limiter.allow(`${userId}:search`, 20, 60_000)) {
+      throw new BadRequestException({ code: "search_rate_limited", message: errorMessage("search_rate_limited") });
     }
-    return this.youtube.search(query);
+    const payload = await this.youtube.search(query);
+    if (key) this.searchCache.set(key, { at: Date.now(), payload });
+    return payload;
   }
 
   async addSong(roomId: string, userId: string, input: { url?: string; videoId?: string; requestId: string; expectedRevision?: number }) {
