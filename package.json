@@ -1,0 +1,25 @@
+{
+  "name": "karaoke-online",
+  "private": true,
+  "version": "0.1.0",
+  "engines": {
+    "node": "22.x"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @karaoke/shared",
+    "predev": "npm run build:shared",
+    "dev": "concurrently -n shared,server,web -c cyan,magenta,green \"npm run dev -w @karaoke/shared\" \"wait-on packages/shared/dist/index.js && npm run dev -w @karaoke/server\" \"wait-on packages/shared/dist/index.js && npm run dev -w @karaoke/web\"",
+    "build": "npm run build -w @karaoke/shared && npm run build -w @karaoke/server && npm run build -w @karaoke/web",
+    "test": "npm run test -w @karaoke/shared",
+    "db:deploy": "npm run prisma:deploy -w @karaoke/server",
+    "db:generate": "npm run prisma:generate -w @karaoke/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "wait-on": "^8.0.1"
+  }
+}

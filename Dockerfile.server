@@ -1,0 +1,17 @@
+FROM node:22-bookworm-slim
+WORKDIR /app
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY package.json package-lock.json* ./
+COPY packages/shared/package.json packages/shared/
+COPY apps/server/package.json apps/server/
+COPY apps/web/package.json apps/web/
+RUN npm install
+COPY tsconfig.base.json ./
+COPY packages/shared packages/shared
+COPY apps/server apps/server
+ENV DATABASE_URL=postgresql://karaoke:karaoke@postgres:5432/karaoke?schema=public
+RUN printf '%s\n' "DATABASE_URL=${DATABASE_URL}" > .env
+RUN npm run build -w @karaoke/shared && npm run build -w @karaoke/server
+WORKDIR /app/apps/server
+EXPOSE 3001
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]

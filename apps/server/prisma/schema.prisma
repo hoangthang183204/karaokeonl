@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  displayName  String   @map("display_name")
+  passwordHash  String   @map("password_hash")
+  gender        String   @default("")
+  skinColor     String   @default("") @map("skin_color")
+  hairColor     String   @default("") @map("hair_color")
+  outfitColor   String   @default("") @map("outfit_color")
+  avatarModel   String   @default("") @map("avatar_model")
+  outfit        String   @default("hoodie")
+  avatarCreated Boolean  @default(false) @map("avatar_created")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  hostedRooms KaraokeRoom[] @relation("RoomHost")
+  memberships RoomMember[]
+  songs       SongQueue[]
+  skipVotes   SkipVote[]
+  logs        ActionLog[]
+
+  @@map("users")
+}
+
+model KaraokeRoom {
+  id        String   @id @db.VarChar(8)
+  name      String
+  hostId    String   @map("host_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  host        User          @relation("RoomHost", fields: [hostId], references: [id])
+  members     RoomMember[]
+  tvState     RoomTvState?
+  queue       SongQueue[]
+  permissions TvPermission?
+  skipVotes   SkipVote[]
+  logs        ActionLog[]
+
+  @@index([hostId])
+  @@map("karaoke_rooms")
+}
+
+model RoomMember {
+  id       String   @id @default(uuid()) @db.Uuid
+  roomId   String   @map("room_id") @db.VarChar(8)
+  userId   String   @map("user_id") @db.Uuid
+  role     String
+  joinedAt DateTime @default(now()) @map("joined_at") @db.Timestamptz(3)
+
+  room KaraokeRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@map("room_members")
+}
+
+/// current_time là mốc phát tại updated_at, không ghi mỗi giây.
+model RoomTvState {
+  id                     String   @id @default(uuid()) @db.Uuid
+  roomId                 String   @unique @map("room_id") @db.VarChar(8)
+  currentVideoId         String?  @map("current_video_id")
+  currentSongTitle       String?  @map("current_song_title")
+  currentThumbnail       String?  @map("current_thumbnail")
+  currentChannelTitle    String?  @map("current_channel_title")
+  currentSongId          String?  @map("current_song_id")
+  currentRequestedBy     String?  @map("current_requested_by")
+  currentRequestedByName String?  @map("current_requested_by_name")
+  playbackState          String   @default("idle") @map("playback_state")
+  currentTime            Float    @default(0) @map("current_time")
+  duration               Float    @default(0)
+  hostId                 String   @map("host_id")
+  revision               Int      @default(0)
+  songSessionId          String?  @map("song_session_id")
+  errorCode              String?  @map("error_code")
+  errorMessage           String?  @map("error_message")
+  updatedAt              DateTime @map("updated_at") @db.Timestamptz(3)
+
+  room KaraokeRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("room_tv_states")
+}
+
+model SongQueue {
+  id               String   @id @db.Uuid
+  roomId           String   @map("room_id") @db.VarChar(8)
+  videoId          String   @map("video_id")
+  title            String
+  thumbnail        String
+  channelTitle     String   @default("") @map("channel_title")
+  requestedById    String   @map("requested_by") @db.Uuid
+  requestedByName  String   @map("requested_by_name")
+  status           String
+  position         Int
+  createdAt        DateTime @map("created_at") @db.Timestamptz(3)
+
+  room      KaraokeRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  requester User        @relation(fields: [requestedById], references: [id])
+
+  @@index([roomId, status, position])
+  @@map("song_queue")
+}
+
+model TvPermission {
+  id                         String  @id @default(uuid()) @db.Uuid
+  roomId                     String  @unique @map("room_id") @db.VarChar(8)
+  memberCanAddSong           Boolean @default(true) @map("member_can_add_song")
+  memberCanVoteSkip          Boolean @default(true) @map("member_can_vote_skip")
+  memberCanControlPlayback   Boolean @default(false) @map("member_can_control_playback")
+  coHostCanControlPlayback   Boolean @default(true) @map("cohost_can_control_playback")
+  hostOnlyCanClearQueue      Boolean @default(true) @map("host_only_clear_queue")
+  skipThreshold              Int     @default(2) @map("skip_threshold")
+  autoSkipOnThreshold        Boolean @default(false) @map("auto_skip_on_threshold")
+  voteCooldownMs             Int     @default(5000) @map("vote_cooldown_ms")
+  voteDurationMs             Int     @default(60000) @map("vote_duration_ms")
+
+  room KaraokeRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("tv_permissions")
+}
+
+model SkipVote {
+  id            String   @id @default(uuid()) @db.Uuid
+  roomId        String   @map("room_id") @db.VarChar(8)
+  songSessionId String   @map("song_session_id")
+  userId        String   @map("user_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  room KaraokeRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, songSessionId, userId])
+  @@index([roomId, songSessionId])
+  @@map("skip_votes")
+}
+
+model ActionLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  roomId    String   @map("room_id") @db.VarChar(8)
+  userId    String?  @map("user_id") @db.Uuid
+  action    String
+  detail    String   @default("")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  room KaraokeRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User?       @relation(fields: [userId], references: [id])
+
+  @@index([roomId, createdAt])
+  @@map("action_logs")
+}

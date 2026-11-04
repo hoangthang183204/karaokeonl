@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: karaoke-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build -w @karaoke/shared && npm run build -w @karaoke/server
+    startCommand: npm run prisma:deploy -w @karaoke/server && npm run start -w @karaoke/server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: karaoke-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WEB_ORIGIN
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+
+databases:
+  - name: karaoke-db
+    databaseName: karaoke
+    user: karaoke
+    plan: free
+    region: singapore
+    ipAllowList: []
