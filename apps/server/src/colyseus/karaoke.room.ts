@@ -31,6 +31,10 @@ import {
   placeCan,
   takeCan,
   tickHand,
+  tickCombat,
+  resolveCombat,
+  isCombatAction,
+  combatLocked,
   sanitizeLighting,
   stepDanceLight,
   tickServices,
@@ -289,6 +293,8 @@ export class KaraokeRoom extends Room<KaraokeState> {
     this.onMessage("beer:place", (client) => this.beer(client, "place"));
     this.onMessage("beer:discard", (client) => this.beer(client, "discard"));
     this.onMessage("player:emote", (client, payload) => this.emote(client, payload));
+    this.onMessage("combat:act", (client, payload) => this.combat(client, payload));
+    this.onMessage("room:pvp", (client, payload) => this.setPvp(client, payload));
     this.onMessage("chat:send", (client, payload) => this.chat(client, payload));
   }
 
@@ -466,7 +472,7 @@ export class KaraokeRoom extends Room<KaraokeState> {
 
   private move(client: Client, payload: unknown) {
     const player = this.player(client);
-    if (!player || player.seated) return;
+    if (!player || player.seated || combatLocked(player) || player.combatUntil > Date.now()) return;
     const body = asRecord(payload);
     const now = Date.now();
     const x = Number(body.x);
@@ -543,7 +549,7 @@ export class KaraokeRoom extends Room<KaraokeState> {
 
   private sit(client: Client, payload: unknown) {
     const player = this.player(client);
-    if (!player) return;
+    if (!player || combatLocked(player)) return;
     const seatId = asString(asRecord(payload).seatId);
     if (!seatId) {
       player.seated = false;
@@ -576,7 +582,7 @@ export class KaraokeRoom extends Room<KaraokeState> {
   private emote(client: Client, payload: unknown) {
     const player = this.player(client);
     const emote = asString(asRecord(payload).emote);
-    if (!player || !EMOTES.includes(emote as (typeof EMOTES)[number])) return;
+    if (!player || combatLocked(player) || !EMOTES.includes(emote as (typeof EMOTES)[number])) return;
     if (this.hitLimit(`${player.id}:emote`, 4, 4000)) return;
     player.emote = emote;
     player.emoteUntil = Date.now() + 2600;
@@ -587,7 +593,7 @@ export class KaraokeRoom extends Room<KaraokeState> {
 
   private service(client: Client, payload: unknown) {
     const player = this.player(client);
-    if (!player) return;
+    if (!player || combatLocked(player)) return;
     if (this.hitLimit(`${player.id}:service`, 4, 8000)) {
       client.send("tv:error", { code: "rate_limited", message: "Hãy chờ một chút trước khi gọi tiếp." });
       return;
@@ -626,6 +632,10 @@ export class KaraokeRoom extends Room<KaraokeState> {
   private beer(client: Client, action: "take" | "open" | "drink" | "cancel" | "place" | "discard") {
     const player = this.player(client);
     if (!player) return;
+    if (combatLocked(player)) {
+      client.send("tv:error", { code: "invalid_request", message: "Không dùng được lúc đang nằm." });
+      return;
+    }
     if (this.hitLimit(`${player.id}:beer`, 8, 4000)) return;
     const now = Date.now();
     const actor = { id: player.id, x: player.x, z: player.z, role: player.role };
@@ -647,7 +657,12 @@ export class KaraokeRoom extends Room<KaraokeState> {
     const now = Date.now();
     const moved = tickServices(this.services, now, 0.1);
     this.state.players.forEach((player) => {
+      if (combatLocked(player)) {
+        if (player.hand === "drinking") player.hand = "open";
+        if (player.hand === "opening") player.hand = "closed";
+      }
       tickHand(player, now, 0.1, player.seated);
+      tickCombat(player, now);
     });
     if (moved) this.syncServices();
     this.applyDanceLight(now);
@@ -762,6 +777,28 @@ export class KaraokeRoom extends Room<KaraokeState> {
     for (const id of [...this.state.orders.keys()]) {
       if (!orderIds.has(id)) this.state.orders.delete(id);
     }
+  }
+
+  private combat(client: Client, payload: unknown) {
+    const player = this.player(client);
+    if (!player) return;
+    if (this.hitLimit(`${player.id}:combat`, 10, 2000)) return;
+    const body = asRecord(payload);
+    const action = asString(body.action);
+    if (!isCombatAction(action)) return;
+    const targetId = asString(body.targetId);
+    const target = targetId ? this.state.players.get(targetId) ?? null : null;
+    const result = resolveCombat(player, target, action, Date.now(), this.state.pvpEnabled);
+    if (!result.ok) client.send("tv:error", { code: "invalid_request", message: result.message });
+  }
+
+  private setPvp(client: Client, payload: unknown) {
+    const actor = this.actor(client);
+    if (!actor || actor.userId !== this.engine.hostId) {
+      client.send("tv:error", { code: "forbidden", message: errorMessage("forbidden") });
+      return;
+    }
+    this.state.pvpEnabled = asRecord(payload).enabled !== false;
   }
 
   private chat(client: Client, payload: unknown) {

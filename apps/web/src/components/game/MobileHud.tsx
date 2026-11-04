@@ -11,6 +11,7 @@ import { TVControlPanel } from "../youtube/TVControlPanel";
 import { VoicePanel } from "../voice/VoicePanel";
 import { LightingPanel } from "./LightingPanel";
 import { ServiceMenu } from "./ServiceMenu";
+import { CombatPad, FxToggles, PvpToggle } from "./CombatHud";
 
 export type MobileSheet = "queue" | "lights" | "people" | "emote" | "settings" | "voice" | "service" | "desk" | null;
 
@@ -113,6 +114,7 @@ export function MobileHud({
       </div>
 
       <Joystick />
+      <CombatPad className="absolute bottom-[calc(5.4rem+env(safe-area-inset-bottom))] right-[5.5rem] z-30" />
 
       <div className="absolute bottom-[max(0.7rem,env(safe-area-inset-bottom))] right-[max(0.7rem,env(safe-area-inset-right))] z-30 flex flex-col items-center gap-2">
         <button className="icon-btn" aria-label="Emote" title="Emote" onClick={() => open("emote")}><EmoteIcon /></button>
@@ -170,7 +172,9 @@ export function MobileHud({
             <button className="control" onClick={() => open("service")}>Phục vụ</button>
             <button className="control" onClick={() => open("desk")}>Bàn karaoke</button>
           </div>
-          <p className="mt-3 text-xs leading-5 text-white/50">Vuốt joystick để đi. Vuốt nền bên phải để xoay camera. Hai ngón để kéo gần hoặc xa.</p>
+          <PvpToggle />
+          <FxToggles />
+          <p className="mt-3 text-xs leading-5 text-white/50">Vuốt joystick để đi. Vuốt nền bên phải để xoay camera. Nút Đấm, Đẩy, Né, Đỡ, Trêu nhắm người gần nhất.</p>
         </Sheet>
       ) : null}
       {sheet === "service" ? (

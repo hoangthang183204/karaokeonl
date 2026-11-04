@@ -60,10 +60,15 @@ export function currentInteract(): InteractTarget | null {
 }
 
 export function refreshInteract() {
+  if (localMotion.hpState === "knocked_out" || localMotion.hpState === "recovering") {
+    interactHud.label = "";
+    return;
+  }
   interactHud.label = currentInteract()?.label ?? "";
 }
 
 export function performInteract() {
+  if (localMotion.hpState === "knocked_out" || localMotion.hpState === "recovering") return;
   const target = currentInteract();
   if (!target) return;
   if (target.kind === "seat" && localMotion.seated) {

@@ -78,7 +78,7 @@ export const PLAYER_GAP = 0.52;
 export const EMOTES = ["wave", "clap", "laugh", "heart", "dance", "cheer"] as const;
 export type EmoteId = (typeof EMOTES)[number];
 
-export const MOTIONS = ["idle", "walk", "run", "jump", "sit", "stand", "sing", "dance", "wave", "clap"] as const;
+export const MOTIONS = ["idle", "walk", "run", "jump", "sit", "stand", "sing", "dance", "wave", "clap", "punch", "push", "dodge", "block", "stagger", "lie", "taunt"] as const;
 export type MotionId = (typeof MOTIONS)[number];
 
 export const OUTFITS = ["hoodie", "vest"] as const;

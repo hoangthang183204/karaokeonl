@@ -17,6 +17,8 @@ import {
   type SofaRun,
 } from "@karaoke/shared";
 import { drunkVisual } from "@karaoke/shared";
+import { sendCombat } from "@/game/combat-client";
+import { fxSettings } from "@/game/fx-settings";
 import { performInteract, refreshInteract, seatOccupied } from "@/game/interact";
 import { screenMatrix } from "@/game/screen-fit";
 import { actions, cameraRig, joystick, localMotion, npcBodies, propBodies, remoteBodies, remoteRoster, screenFrame, serviceRoster, stageRefs, uiPointers } from "@/game/runtime";
@@ -238,7 +240,14 @@ function LocalAvatar() {
       if (typingTarget(event.target)) return;
       keys.add(event.key.toLowerCase());
       if (event.code === "Space") event.preventDefault();
-      if (!event.repeat && event.key.toLowerCase() === "e") performInteract();
+      if (event.repeat) return;
+      const key = event.key.toLowerCase();
+      if (key === "e") performInteract();
+      if (key === "f") sendCombat("punch");
+      if (key === "g") sendCombat("push");
+      if (key === "v") sendCombat("dodge");
+      if (key === "c") sendCombat("block");
+      if (key === "t") sendCombat("taunt");
     };
     const up = (event: KeyboardEvent) => keys.delete(event.key.toLowerCase());
     window.addEventListener("keydown", down);
@@ -251,6 +260,26 @@ function LocalAvatar() {
 
   useFrame((_, delta) => {
     if (!localMotion.ready) return;
+    const locked = localMotion.hpState === "knocked_out" || localMotion.hpState === "recovering" || localMotion.combatUntil > Date.now();
+    if (locked) {
+      if (ref.current) {
+        ref.current.position.set(localMotion.x, localMotion.y, localMotion.z);
+        ref.current.rotation.y = localMotion.rot;
+      }
+      const now = performance.now();
+      if (now - sent.current > 100) {
+        sent.current = now;
+        useTv.getState().send("player:move", {
+          x: localMotion.x,
+          y: localMotion.y,
+          z: localMotion.z,
+          rot: localMotion.rot,
+          motion: localMotion.motion,
+          singing: false,
+        });
+      }
+      return;
+    }
     const dt = Math.min(delta, 0.05);
     const running = keys.has("shift") || actions.run;
     if (!localMotion.seated) {
@@ -340,6 +369,7 @@ function LocalAvatar() {
           avatarModel: localMotion.avatarModel,
           hand: localMotion.hand,
           drunk: localMotion.drunk,
+          hp: localMotion.hp,
           action: localMotion.action,
           actionUntil: localMotion.actionUntil,
           name: user?.displayName ?? "Bạn",
@@ -515,6 +545,7 @@ function RemoteAvatar({ id }: { id: string }) {
             avatarModel: body?.avatarModel ?? "",
             hand: body?.hand ?? "",
             drunk: body?.drunk ?? 0,
+            hp: body?.hp ?? 100,
             name: body?.name ?? "Khách",
           };
         }}
@@ -668,7 +699,7 @@ function CameraRig() {
       cameraTarget.set(0, 2.8, 0.6);
       camera.position.lerp(cameraTarget, 1 - Math.exp(-8 * delta));
       camera.lookAt(0, 1.5, -6.2);
-      const stageSway = drunkVisual(localMotion.drunk);
+      const stageSway = cameraDrunk();
       if (stageSway.roll > 0.0001) camera.rotateZ(Math.sin(performance.now() / 1000 * 1.7) * stageSway.roll * 0.45);
       offsetReady.current = false;
       return;
@@ -697,7 +728,7 @@ function CameraRig() {
       localMotion.y + 1.05 + offset.current.y,
       localMotion.z + offset.current.z,
     );
-    const sway = drunkVisual(localMotion.drunk);
+    const sway = cameraDrunk();
     if (sway.sway > 0.0001) {
       const time = performance.now() / 1000;
       camera.position.x += Math.sin(time * 1.3) * sway.sway * 8;
@@ -707,6 +738,15 @@ function CameraRig() {
     if (sway.roll > 0.0001) camera.rotateZ(Math.sin(performance.now() / 1000 * 1.7) * sway.roll);
   });
   return null;
+}
+
+function cameraDrunk() {
+  const knocked = localMotion.hpState === "knocked_out";
+  const level = localMotion.drunk * (knocked ? 0.2 : 1);
+  const sway = drunkVisual(level);
+  if (!fxSettings.reduceCamera && !fxSettings.reduceMotion) return sway;
+  const scale = (fxSettings.reduceCamera ? 0.15 : 1) * (fxSettings.reduceMotion ? 0.4 : 1);
+  return { ...sway, roll: sway.roll * scale, sway: sway.sway * scale };
 }
 
 export function sendEmote(emote: string) {

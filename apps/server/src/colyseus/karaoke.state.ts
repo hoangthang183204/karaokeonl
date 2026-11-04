@@ -41,6 +41,13 @@ export class PlayerState extends Schema {
   @type("number") handUntil: number = 0;
   @type("number") drunkLevel: number = 0;
   @type("number") cansDrunk: number = 0;
+  @type("number") hp: number = 100;
+  @type("string") hpState: string = "normal";
+  @type("string") combat: string = "";
+  @type("number") combatUntil: number = 0;
+  @type("number") downUntil: number = 0;
+  @type("number") recoverUntil: number = 0;
+  @type("number") cooldownUntil: number = 0;
 }
 
 export class NpcState extends Schema {
@@ -129,6 +136,7 @@ export class KaraokeState extends Schema {
   @type("string") lightColorStyle: string = "fixed";
   @type("string") lightSpotTarget: string = "stage";
   @type("boolean") lightAutoDance: boolean = true;
+  @type("boolean") pvpEnabled: boolean = true;
   @type("number") lightStartedAt: number = 0;
   @type("number") lightRevision: number = 0;
   @type(["string"]) skipVoterIds = new ArraySchema<string>();

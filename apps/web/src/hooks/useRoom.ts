@@ -6,7 +6,7 @@ import { npcBodies, propBodies, serviceRoster } from "@/game/runtime";
 import type { Room } from "colyseus.js";
 import { useEffect } from "react";
 import { api } from "@/lib/api";
-import { localMotion, remoteBodies, remoteRoster } from "@/game/runtime";
+import { localMotion, remoteBodies, remoteRoster, roomFlags } from "@/game/runtime";
 import { useSession } from "@/stores/session.store";
 import { useTv, type ChatLine, type RosterPlayer } from "@/stores/tv.store";
 
@@ -34,6 +34,10 @@ interface SchemaPlayer {
   handUntil: number;
   drunkLevel: number;
   cansDrunk: number;
+  hp: number;
+  hpState: string;
+  combat: string;
+  combatUntil: number;
 }
 
 interface SchemaChat {
@@ -61,6 +65,7 @@ interface SchemaQueue {
 interface KaraokeSchema {
   roomName: string;
   hostId: string;
+  pvpEnabled: boolean;
   currentVideoId: string;
   currentSongTitle: string;
   currentThumbnail: string;
@@ -167,6 +172,7 @@ export function useRoom(roomId: string) {
     let lightSignature = "";
 
     const apply = (state: KaraokeSchema) => {
+      roomFlags.pvp = state.pvpEnabled !== false;
       const players: RosterPlayer[] = [];
       const ids: string[] = [];
       state.players.forEach((player, id) => {
@@ -209,6 +215,19 @@ export function useRoom(roomId: string) {
           localMotion.handUntil = player.handUntil || 0;
           localMotion.drunk = player.drunkLevel || 0;
           localMotion.cansDrunk = player.cansDrunk || 0;
+          localMotion.hp = Number.isFinite(player.hp) ? player.hp : 100;
+          localMotion.hpState = player.hpState || "normal";
+          localMotion.combatUntil = player.combatUntil || 0;
+          const locked = player.hpState === "knocked_out" || player.hpState === "recovering" || (player.combatUntil || 0) > Date.now();
+          if (locked) {
+            localMotion.x = player.x;
+            localMotion.z = player.z;
+            localMotion.y = player.y || 0;
+            localMotion.rot = player.rot;
+            localMotion.motion = (player.motion || "idle") as typeof localMotion.motion;
+            localMotion.seated = false;
+            localMotion.vy = 0;
+          }
           return;
         }
         ids.push(id);
@@ -233,6 +252,8 @@ export function useRoom(roomId: string) {
           emoteUntil: player.emoteUntil,
           hand: player.hand || "",
           drunk: player.drunkLevel || 0,
+          hp: Number.isFinite(player.hp) ? player.hp : 100,
+          hpState: player.hpState || "normal",
         });
       });
       for (const id of remoteBodies.keys()) {

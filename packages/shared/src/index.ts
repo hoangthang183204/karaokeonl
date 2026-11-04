@@ -7,6 +7,7 @@ export * from "./lighting";
 export * from "./npc";
 export * from "./service-config";
 export * from "./drink";
+export * from "./combat";
 export * from "./youtube-url";
 export * from "./youtube-metadata";
 export * from "./permissions";

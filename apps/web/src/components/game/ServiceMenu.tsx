@@ -1,6 +1,7 @@
 "use client";
 
 import { drunkTier, drunkVisual } from "@karaoke/shared";
+import { fxSettings } from "@/game/fx-settings";
 import { localMotion, npcBodies, propBodies, serviceRoster } from "@/game/runtime";
 import { useSession } from "@/stores/session.store";
 import { useTv } from "@/stores/tv.store";
@@ -140,14 +141,19 @@ export function DrunkVeil() {
     return () => window.clearInterval(timer);
   }, []);
   void tick;
-  const fx = drunkVisual(localMotion.drunk);
-  if (fx.blur < 0.05) return null;
+  const knocked = localMotion.hpState === "knocked_out";
+  const level = localMotion.drunk * (knocked ? 0.2 : 1);
+  const fx = drunkVisual(level);
+  const blurScale = (fxSettings.reduceBlur ? 0 : 1) * (fxSettings.reduceMotion ? 0.45 : 1);
+  const blur = fx.blur * blurScale;
+  if (blur < 0.05 && fx.vignette < 36) return null;
+  const tint = fxSettings.disableWarp ? 0 : Math.min(0.28, fx.sway * 6);
   return (
     <div
       className="pointer-events-none absolute inset-0 z-[6]"
       style={{
-        backdropFilter: `blur(${fx.blur.toFixed(2)}px)`,
-        boxShadow: `inset 0 0 ${fx.vignette.toFixed(0)}px rgba(0,0,0,0.55)`,
+        backdropFilter: blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : "none",
+        boxShadow: `inset 0 0 ${fx.vignette.toFixed(0)}px rgba(0,0,0,0.55), inset 10px 0 18px rgba(255,70,110,${tint.toFixed(3)}), inset -10px 0 18px rgba(70,190,255,${tint.toFixed(3)})`,
       }}
     />
   );

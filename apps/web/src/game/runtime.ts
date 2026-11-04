@@ -48,7 +48,12 @@ export const localMotion = {
   cansDrunk: 0,
   action: "",
   actionUntil: 0,
+  hp: 100,
+  hpState: "normal",
+  combatUntil: 0,
 };
+
+export const roomFlags = { pvp: true };
 
 export interface RemoteBody {
   id: string;
@@ -71,6 +76,8 @@ export interface RemoteBody {
   emoteUntil: number;
   hand: string;
   drunk: number;
+  hp: number;
+  hpState: string;
 }
 
 export const remoteBodies = new Map<string, RemoteBody>();

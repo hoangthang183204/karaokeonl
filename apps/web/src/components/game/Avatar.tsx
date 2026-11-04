@@ -1,6 +1,7 @@
 "use client";
 
 import { Html } from "@react-three/drei";
+import { fxSettings } from "@/game/fx-settings";
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import type { Group, MeshStandardMaterial } from "three";
@@ -22,6 +23,7 @@ export interface AvatarSample {
   danceStyle?: string;
   action?: string;
   actionUntil?: number;
+  hp?: number;
 }
 
 export function Avatar({ sample, preview = false }: { sample: () => AvatarSample; preview?: boolean }) {
@@ -49,6 +51,8 @@ export function Avatar({ sample, preview = false }: { sample: () => AvatarSample
   const vest = useRef<Group>(null);
   const can = useRef<Group>(null);
   const name = useRef<HTMLDivElement>(null);
+  const hpFill = useRef<HTMLDivElement>(null);
+  const hpWrap = useRef<HTMLDivElement>(null);
 
   useFrame(({ clock }) => {
     const pose = sample();
@@ -64,7 +68,8 @@ export function Avatar({ sample, preview = false }: { sample: () => AvatarSample
     const walk = motion === "walk" || motion === "run";
     const speed = motion === "run" ? 12 : 7;
     const swing = walk ? Math.sin(t * speed) * (motion === "run" ? 0.7 : 0.45) : 0;
-    const sway = tipsy ? Math.sin(t * (1.4 + Math.min(drunk, 7) * 0.25)) * (0.04 + Math.min(drunk, 7) * 0.025) : 0;
+    const swayScale = fxSettings.reduceMotion ? 0.35 : 1;
+    const sway = tipsy ? Math.sin(t * (1.4 + Math.min(drunk, 7) * 0.25)) * (0.04 + Math.min(drunk, 7) * 0.025) * swayScale : 0;
     const styled = pose.gender === "male" || pose.gender === "female";
     const female = pose.gender === "female";
     if (cloth.current) cloth.current.color.set(pose.color || "#c084fc");
@@ -116,7 +121,45 @@ export function Avatar({ sample, preview = false }: { sample: () => AvatarSample
       armR.current.rotation.z = motion === "dance" ? -Math.sin(t * danceRate + (pose.danceStyle === "loop2" ? 1.2 : 0)) * 0.6 : holding ? -0.35 : -0.15;
       if (can.current) can.current.visible = Boolean(holding);
     }
+    if (body.current && armL.current && armR.current && legL.current && legR.current) {
+      const unsteady = tipsy && walk && drunk >= 5 ? Math.sin(t * 3.1) * 0.14 : 0;
+      if (unsteady) body.current.rotation.z += unsteady;
+      if (motion === "punch") {
+        armR.current.rotation.x = -1.7;
+        body.current.rotation.x = 0.28;
+      } else if (motion === "push") {
+        armL.current.rotation.x = -1.15;
+        armR.current.rotation.x = -1.15;
+        body.current.rotation.x = 0.18;
+      } else if (motion === "block") {
+        armL.current.rotation.x = -1.35;
+        armR.current.rotation.x = -1.35;
+        armL.current.rotation.z = 0.7;
+        armR.current.rotation.z = -0.7;
+      } else if (motion === "dodge") {
+        body.current.rotation.z = 0.5;
+        body.current.position.y -= 0.16;
+      } else if (motion === "stagger") {
+        body.current.rotation.x = -0.38;
+      } else if (motion === "taunt") {
+        armR.current.rotation.x = -2.5;
+        armR.current.rotation.z = -0.4;
+      } else if (motion === "lie") {
+        body.current.rotation.x = 1.35;
+        body.current.position.y = 0.32;
+        legL.current.rotation.x = 0.15;
+        legR.current.rotation.x = -0.15;
+        armL.current.rotation.x = 0.2;
+        armR.current.rotation.x = 0.2;
+      }
+    }
     if (name.current && name.current.textContent !== pose.name) name.current.textContent = pose.name;
+    if (hpWrap.current && hpFill.current) {
+      const hp = Math.max(0, Math.min(100, pose.hp ?? 100));
+      hpWrap.current.style.display = fxSettings.showHp ? "block" : "none";
+      hpFill.current.style.width = `${hp}%`;
+      hpFill.current.style.background = hp <= 20 ? "#fb7185" : hp <= 60 ? "#facc15" : "#34d399";
+    }
   });
 
   return (
@@ -207,7 +250,12 @@ export function Avatar({ sample, preview = false }: { sample: () => AvatarSample
       </group>
       {preview ? null : (
         <Html center position={[0, 1.72, 0]} distanceFactor={8} zIndexRange={[4, 0]}>
-          <div ref={name} className="whitespace-nowrap rounded-full bg-black/60 px-2 py-0.5 text-xs text-white" />
+          <div className="rounded-full bg-black/60 px-2 py-0.5 text-center text-xs text-white">
+            <div ref={name} className="whitespace-nowrap" />
+            <div ref={hpWrap} className="mx-auto mt-0.5 h-1 w-12 overflow-hidden rounded bg-white/20">
+              <div ref={hpFill} className="h-full w-full" />
+            </div>
+          </div>
         </Html>
       )}
     </group>

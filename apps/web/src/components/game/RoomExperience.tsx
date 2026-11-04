@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { requestId } from "@/lib/time";
 import { applyAvatar, lookMessage } from "@/game/avatar-look";
 import { cameraRig, interactHud, localMotion } from "@/game/runtime";
+import { loadFxSettings } from "@/game/fx-settings";
 import type { AvatarConfig } from "@karaoke/shared";
 import { api } from "@/lib/api";
 import { MobileHud, type MobileSheet } from "./MobileHud";
@@ -19,6 +20,7 @@ import { YouTubeSearchModal } from "../youtube/YouTubeSearchModal";
 import { VoicePanel } from "../voice/VoicePanel";
 import { LightingPanel } from "./LightingPanel";
 import { DrinkBar, DrunkVeil, ServiceMenu } from "./ServiceMenu";
+import { CombatPad, EyelidVeil, FxToggles, PvpToggle } from "./CombatHud";
 import { RoomScene } from "./RoomScene";
 import { TVScreenOverlay } from "./TVScreenOverlay";
 
@@ -81,6 +83,7 @@ export function RoomExperience({ roomId }: { roomId: string }) {
   useRoom(roomId);
 
   useEffect(() => {
+    loadFxSettings();
     const apply = () => {
       const width = window.innerWidth;
       const height = window.innerHeight;
@@ -230,6 +233,8 @@ export function RoomExperience({ roomId }: { roomId: string }) {
       </RoomViewBoundary>
       <TVScreenOverlay />
       <DrunkVeil />
+      <EyelidVeil />
+      {tier === "desktop" ? <CombatPad className="absolute bottom-[10.5rem] right-[22rem] z-30" /> : null}
       <DrinkBar />
 
       {tier === "desktop" ? <header className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex items-start justify-between gap-3 p-3">
@@ -265,7 +270,9 @@ export function RoomExperience({ roomId }: { roomId: string }) {
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
           <div className="glass w-full max-w-sm rounded-3xl p-4">
             <h2 className="text-lg font-bold">Menu</h2>
-            <p className="mt-1 text-xs text-white/60">WASD di chuyển, Shift chạy, Space nhảy, E tương tác, chuột xoay camera.</p>
+            <p className="mt-1 text-xs text-white/60">WASD di chuyển, Shift chạy, Space nhảy, E tương tác. F đấm, G đẩy, V né, C đỡ, T trêu người gần nhất.</p>
+            <PvpToggle />
+            <FxToggles />
             <div className="mt-3 flex flex-wrap gap-2">
               {LOOK_COLORS.map((color) => (
                 <button key={color} aria-label={color} className="h-8 w-8 rounded-full border border-white/30" style={{ background: color }} onClick={() => applyLook(color, look.outfit, setLook)} />
