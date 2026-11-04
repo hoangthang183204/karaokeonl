@@ -49,13 +49,14 @@ export function TVScreenOverlay() {
       ) : null}
       {autoplayBlocked && videoId ? (
         <button
-          className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-fuchsia-500 px-4 py-2 text-sm font-semibold text-white shadow-lg"
+          className="absolute inset-0 z-10 grid place-items-center bg-black/45 px-4 text-center"
           onClick={() => {
-            activePlayer.current?.unmute();
-            activePlayer.current?.play();
+            const player = activePlayer.current;
+            player?.unmute();
+            player?.play(true);
           }}
         >
-          Bật tiếng YouTube
+          <span className="rounded-full bg-fuchsia-500 px-4 py-2 text-sm font-semibold text-white shadow-lg">Chạm để phát</span>
         </button>
       ) : null}
       <span className="sr-only">{title}</span>

@@ -35,25 +35,22 @@ export function planPlaybackSync(input: {
 
   if (!videoId || remoteState === "idle") return { type: "idle" };
   if (remoteState === "error") return { type: "error" };
-  if (input.localStatus === "unready") {
-    return {
-      type: "load",
-      videoId,
-      startSeconds: expectedPlaybackTime(input.remote, input.nowMs),
-      autoplay: remoteState === "playing",
-    };
-  }
-  if (input.localStatus === "buffering") return { type: "none" };
-
   const expected = expectedPlaybackTime(input.remote, input.nowMs);
   const videoChanged = input.localVideoId !== videoId;
-  if (videoChanged || input.localStatus === "unstarted") {
+  if (input.localStatus === "unready" || videoChanged) {
     return {
       type: "load",
       videoId,
       startSeconds: expected,
       autoplay: remoteState === "playing",
     };
+  }
+  if (input.localStatus === "buffering") return { type: "none" };
+
+  const waitingToStart = input.localStatus === "unstarted" || input.localStatus === "cued";
+  if (waitingToStart) {
+    if (remoteState !== "playing") return { type: "none" };
+    return input.autoplayBlocked ? { type: "wait-gesture" } : { type: "play" };
   }
 
   if (input.autoplayBlocked && remoteState === "playing") {

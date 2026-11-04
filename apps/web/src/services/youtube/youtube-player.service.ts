@@ -54,6 +54,8 @@ export class YouTubePlayerService {
   errorText = "";
   private readonly listeners = new Set<Listener>();
   private wantPlay = false;
+  private autoplayTimer = 0;
+  private lastPlayAt = 0;
 
   subscribe(listener: Listener) {
     this.listeners.add(listener);
@@ -91,11 +93,10 @@ export class YouTubePlayerService {
         onStateChange: (event) => {
           this.status = mapState(event.data);
           if (this.status === "playing") {
+            window.clearTimeout(this.autoplayTimer);
+            this.autoplayTimer = 0;
             this.autoplayBlocked = false;
             this.wantPlay = false;
-          }
-          if (this.wantPlay && (this.status === "paused" || this.status === "cued" || this.status === "unstarted")) {
-            this.autoplayBlocked = true;
           }
           this.emit();
         },
@@ -114,6 +115,7 @@ export class YouTubePlayerService {
     this.errorText = "";
     this.wantPlay = autoplay;
     this.autoplayBlocked = false;
+    if (autoplay) this.armAutoplayCheck();
     if (!this.player || !this.ready) {
       this.pending = { videoId, startSeconds, autoplay };
       return;
@@ -132,10 +134,17 @@ export class YouTubePlayerService {
     }
   }
 
-  play() {
+  play(fromUser = false) {
     this.wantPlay = true;
+    const now = Date.now();
+    if (!fromUser && now - this.lastPlayAt < 2000) {
+      this.armAutoplayCheck();
+      return;
+    }
+    this.lastPlayAt = now;
     this.autoplayBlocked = false;
     this.invoke("playVideo");
+    this.armAutoplayCheck();
   }
 
   pause() {
@@ -180,6 +189,17 @@ export class YouTubePlayerService {
     this.invoke("stopVideo");
   }
 
+  private armAutoplayCheck() {
+    if (this.autoplayTimer) return;
+    this.autoplayTimer = window.setTimeout(() => {
+      this.autoplayTimer = 0;
+      if (this.destroyed || !this.wantPlay) return;
+      if (this.status === "playing" || this.status === "buffering") return;
+      this.autoplayBlocked = true;
+      this.emit();
+    }, 1500);
+  }
+
   private invoke(method: string, ...args: unknown[]) {
     const player = this.player as unknown as Record<string, (...params: unknown[]) => unknown> | null;
     const fn = player?.[method];
@@ -193,6 +213,7 @@ export class YouTubePlayerService {
 
   destroy() {
     this.destroyed = true;
+    window.clearTimeout(this.autoplayTimer);
     this.pending = null;
     try {
       this.player?.destroy();

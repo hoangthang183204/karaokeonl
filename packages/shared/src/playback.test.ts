@@ -46,6 +46,28 @@ describe("playback clock", () => {
     expect(seek).toEqual({ type: "seek", time: 40 });
   });
 
+  it("does not reload or seek a player that is still waiting to start", () => {
+    const cued = planPlaybackSync({
+      remote: base,
+      localVideoId: base.currentVideoId,
+      localTime: 0,
+      localStatus: "cued",
+      autoplayBlocked: false,
+      nowMs: base.updatedAt + 10_000,
+    });
+    expect(cued).toEqual({ type: "play" });
+
+    const blocked = planPlaybackSync({
+      remote: base,
+      localVideoId: base.currentVideoId,
+      localTime: 0,
+      localStatus: "unstarted",
+      autoplayBlocked: true,
+      nowMs: base.updatedAt + 10_000,
+    });
+    expect(blocked.type).toBe("wait-gesture");
+  });
+
   it("waits for a gesture when the browser blocks autoplay", () => {
     const plan = planPlaybackSync({
       remote: base,
